@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -26,6 +27,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.shift28.app.BatchConfirmationRequiredException;
+import com.shift28.app.BatchConflictException;
 import com.shift28.app.ConfirmationRequiredException;
 import com.shift28.app.ConflictException;
 import com.shift28.app.FieldConflictException;
@@ -39,6 +42,8 @@ import com.shift28.app.StaleEditException;
 import com.shift28.app.TooManyRequestsException;
 import com.shift28.app.VerificationRequiredException;
 import com.shift28.domain.DomainValidationException;
+
+import tools.jackson.core.JacksonException;
 
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -138,6 +143,26 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		return problem;
 	}
 
+	@ExceptionHandler(BatchConflictException.class)
+	ProblemDetail batchConflict(BatchConflictException e) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+		problem.setProperty("rows", BatchCheckResponse.conflicts(e.check()));
+		return problem;
+	}
+
+	@ExceptionHandler(BatchConfirmationRequiredException.class)
+	ProblemDetail batchConfirmationRequired(BatchConfirmationRequiredException e) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, e.getMessage());
+		problem.setProperty("compliance", BatchCheckResponse.of(e.check()));
+		problem.setProperty("unconfirmedRows", e.unconfirmedRows());
+		return problem;
+	}
+
+	@ExceptionHandler(RequestTooLargeException.class)
+	ProblemDetail tooLarge(RequestTooLargeException e) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, e.getMessage());
+	}
+
 	@ExceptionHandler(BadCredentialsException.class)
 	ProblemDetail badCredentials() {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Incorrect email, username or password.");
@@ -171,6 +196,41 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 		problem.setDetail("The request has invalid fields.");
 		problem.setProperty("errors", fieldErrors(ex.getBindingResult().getAllErrors()));
 		return handleExceptionInternal(ex, problem, headers, status, request);
+	}
+
+	@Override
+	protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+		for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
+			if (cause instanceof RequestTooLargeException tooLarge) {
+				return handleExceptionInternal(ex, tooLarge(tooLarge), headers, HttpStatus.CONTENT_TOO_LARGE, request);
+			}
+			if (cause instanceof FieldValidationException field) {
+				return handleExceptionInternal(ex, fieldInvalid(field), headers, HttpStatus.BAD_REQUEST, request);
+			}
+		}
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "The request could not be read.");
+		for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
+			if (cause instanceof JacksonException jackson && !jackson.getPath().isEmpty()) {
+				problem.setProperty("errors",
+						List.of(new FieldProblem(path(jackson.getPath()), "This value is not valid.")));
+				break;
+			}
+		}
+		return handleExceptionInternal(ex, problem, headers, status, request);
+	}
+
+	private static String path(List<JacksonException.Reference> references) {
+		StringBuilder path = new StringBuilder();
+		for (JacksonException.Reference reference : references) {
+			if (reference.getPropertyName() != null) {
+				path.append(path.isEmpty() ? "" : ".").append(reference.getPropertyName());
+			}
+			else if (reference.getIndex() >= 0) {
+				path.append('[').append(reference.getIndex()).append(']');
+			}
+		}
+		return path.toString();
 	}
 
 	private static List<FieldProblem> fieldErrors(List<ObjectError> errors) {

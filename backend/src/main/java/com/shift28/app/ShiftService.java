@@ -7,6 +7,7 @@ package com.shift28.app;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,6 +25,8 @@ import com.shift28.persistence.UserRepository;
 public class ShiftService {
 
 	private static final String OVERLAP = "This shift overlaps another shift.";
+
+	private static final String BATCH_OVERLAP = "Some shifts overlap other shifts.";
 
 	private static final String STALE = "This shift was changed elsewhere. Reload and try again.";
 
@@ -54,6 +57,35 @@ public class ShiftService {
 		ShiftEntity shift = new ShiftEntity(userId, input.jobId(), input.startAt(), input.endAt(), input.breakStart(),
 				input.breakEnd(), input.note());
 		return new Saved(save(shift), check);
+	}
+
+	public SavedBatch createAll(UUID userId, List<BatchItem> items) {
+		users.lockById(userId);
+		BatchCheck check = compliance.checkAll(userId, items.stream().map(item -> item.input().toShift(null)).toList());
+		if (!check.overlappingRows().isEmpty()) {
+			throw new BatchConflictException(check);
+		}
+		List<Integer> unconfirmed = IntStream.range(0, items.size())
+			.filter(row -> check.needsConfirmation(row) && !items.get(row).confirmed())
+			.boxed()
+			.toList();
+		if (!unconfirmed.isEmpty()) {
+			throw new BatchConfirmationRequiredException(check, unconfirmed);
+		}
+		List<ShiftEntity> created = items.stream().map(item -> {
+			ShiftInput input = item.input();
+			return new ShiftEntity(userId, input.jobId(), input.startAt(), input.endAt(), input.breakStart(),
+					input.breakEnd(), null);
+		}).toList();
+		try {
+			return new SavedBatch(shifts.saveAllAndFlush(created), check);
+		}
+		catch (DataIntegrityViolationException e) {
+			if (DatabaseErrors.hasSqlState(e, DatabaseErrors.EXCLUSION_VIOLATION)) {
+				throw new ConflictException(BATCH_OVERLAP);
+			}
+			throw e;
+		}
 	}
 
 	public Saved update(UUID userId, UUID shiftId, ShiftInput input, long version, boolean confirmed) {
@@ -100,6 +132,9 @@ public class ShiftService {
 	}
 
 	public record Saved(ShiftEntity shift, DraftCheck check) {
+	}
+
+	public record SavedBatch(List<ShiftEntity> shifts, BatchCheck check) {
 	}
 
 }

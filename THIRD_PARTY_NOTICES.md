@@ -31,6 +31,16 @@ About 100 libraries are bundled, resolved through Spring Boot 4.1.1's dependency
 
 The Google "G" and LINE marks drawn on the sign-in buttons follow those providers' published sign-in branding guidelines.
 
+## Shipped to the browser for schedule import (v1.2)
+
+| Component | License |
+| --- | --- |
+| PDF.js (pdfjs-dist) | Apache-2.0 |
+| Tesseract.js and its WebAssembly core | Apache-2.0 |
+| Tesseract trained language data (English, Japanese) | Apache-2.0 |
+
+These are self-hosted, served only to signed-in users and run on the device.
+
 ## Build and test tooling (not distributed with the application)
 
 | Component | License |

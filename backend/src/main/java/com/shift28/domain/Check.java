@@ -22,7 +22,7 @@ public record Check(CheckType type, LocalDate start, LocalDate end, List<Assessm
 		if (assessments.isEmpty()) {
 			throw new IllegalArgumentException("a check needs at least one assessment");
 		}
-		if (ruleVersions.isEmpty()) {
+		if (ruleVersions.isEmpty() && type != CheckType.TARGET) {
 			throw new IllegalArgumentException("a check needs the rule versions it used");
 		}
 	}

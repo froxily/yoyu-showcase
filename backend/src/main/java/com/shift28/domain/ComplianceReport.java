@@ -10,11 +10,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public record ComplianceReport(List<Check> windows, List<Check> days) {
+public record ComplianceReport(List<Check> windows, List<Check> days, List<Check> targets) {
 
 	public ComplianceReport {
 		windows = List.copyOf(windows);
 		days = List.copyOf(days);
+		targets = List.copyOf(targets);
+	}
+
+	public ComplianceReport(List<Check> windows, List<Check> days) {
+		this(windows, days, List.of());
 	}
 
 	public Status worstStatus() {
@@ -33,8 +38,12 @@ public record ComplianceReport(List<Check> windows, List<Check> days) {
 		return days.stream().filter(day -> day.start().equals(date)).findFirst();
 	}
 
+	public Optional<Check> target(LocalDate start) {
+		return targets.stream().filter(target -> target.start().equals(start)).findFirst();
+	}
+
 	private Stream<Check> checks() {
-		return Stream.concat(windows.stream(), days.stream());
+		return Stream.of(windows, days, targets).flatMap(List::stream);
 	}
 
 }

@@ -44,12 +44,12 @@ record IssueResponse(String type, LocalDate start, LocalDate end, Long minutes, 
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	record ContributionResponse(UUID shiftId, UUID jobId, String jobName, OffsetDateTime startAt, int minutes,
-			boolean draft) {
+			boolean draft, Integer row) {
 
 		static ContributionResponse of(Contribution contribution, Map<UUID, String> jobNames) {
 			return new ContributionResponse(contribution.shiftId(), contribution.jobId(),
 					jobNames.get(contribution.jobId()), ShiftController.inZone(contribution.startAt()),
-					contribution.minutes(), contribution.draft());
+					contribution.minutes(), contribution.draft(), contribution.row());
 		}
 
 	}
