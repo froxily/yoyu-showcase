@@ -1,0 +1,11 @@
+== Logged week (two jobs, 27 hours): worst status OK
+issues: 0
+
+== Proposed Saturday shift (4 hours): worst status VIOLATION
+window 2026-04-06..2026-04-12: 1860 of 1680 minutes (VIOLATION)
+  caused by cafe shift from 2026-04-06T10:00: 360 min
+  caused by konbini shift from 2026-04-07T18:00: 300 min
+  caused by cafe shift from 2026-04-09T10:00: 360 min
+  caused by konbini shift from 2026-04-10T22:00: 300 min
+  caused by cafe shift from 2026-04-11T12:00: 240 min (proposed)
+  caused by cafe shift from 2026-04-12T09:00: 300 min
