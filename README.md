@@ -130,15 +130,15 @@ A deploy is a checked manual step: CI green for the commit, a clean build, a sca
 
 | Suite | Tests |
 | --- | --- |
-| Domain engine (pure Java) | 85 |
-| Persistence (Testcontainers PostgreSQL 16) | 78 |
-| API and security (MockMvc, real database, real OAuth callback with a stubbed token endpoint) | 311 |
+| Domain engine (pure Java) | 97 |
+| Persistence (Testcontainers PostgreSQL 16) | 82 |
+| API and security (MockMvc, real database, real OAuth callback with a stubbed token endpoint) | 325 |
 | Rate limiter (pure Java) | 5 |
 | Application context and migrations | 2 |
-| Frontend logic, schedule import parser and readers, screens and legal pages (Vitest) | 443 |
+| Frontend logic, schedule import parser and readers, screens and legal pages (Vitest) | 537 |
 | OCR benchmark on synthetic fixtures with the real Tesseract engine (recall, field accuracy, silent errors, rows dropped without notice) | 8 |
 
-That is 481 backend tests and 443 frontend tests, plus the OCR benchmark, whose results are synthetic engineering numbers, not real-world accuracy. GitHub Actions runs all of them, the frontend lint and build, and a container smoke test on every push to the private repository.
+That is 511 backend tests and 537 frontend tests, plus the OCR benchmark, whose results are synthetic engineering numbers, not real-world accuracy. GitHub Actions runs all of them, the frontend lint and build, and a container smoke test on every push to the private repository.
 
 ## Disclaimer
 
@@ -162,7 +162,7 @@ including an overnight shift split at midnight. The output of one run is in
 - `backend/src/main/java/com/shift28/domain/`: the complete pure-Java compliance and pay engine (rolling windows, overnight shifts, vacations, rule versions, batch checks for schedule import, tracking profiles, pay premiums)
 - `backend/src/main/java/com/shift28/app/`: the compliance, shift, pay and batch-import services, password policy and rate limiter
 - `backend/src/main/java/com/shift28/web/`: the compliance, shift, pay and batch-import controllers, request and response types and error handling
-- `backend/src/test/java/`: the domain test suite (85 tests, including the spec cases) and the rate-limiter tests
+- `backend/src/test/java/`: the domain test suite (97 tests, including the spec cases) and the rate-limiter tests
 - `docs/`: design decisions, screenshots of v1.2; `demo/`: the synthetic-data demonstration
 
 Not included, by design: the frontend, build files, container and deployment configuration,
